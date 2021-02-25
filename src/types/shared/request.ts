@@ -12,7 +12,12 @@ export interface Session extends Client {
 
 export interface Login extends Client {
     route: 'login';
-    message: payload.Login;
+    payload: payload.Login;
+}
+
+export interface Register extends Client {
+    route: 'register';
+    payload: payload.NewUser;
 }
 
 export interface TaskList extends Client {
@@ -21,15 +26,15 @@ export interface TaskList extends Client {
 
 export interface NewTask extends Client {
     route: 'new-task';
-    message: payload.NewTask;
+    payload: payload.NewTask;
 }
 
 export interface ArchiveTask extends Client {
     route: 'archive-task';
-    message: payload.ArchiveTask;
+    payload: payload.ArchiveTask;
 }
 
 export interface UpdateTask extends Client {
     route: 'update-task';
-    message: payload.UpdateTask;
+    payload: payload.UpdateTask;
 }

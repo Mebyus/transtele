@@ -30,6 +30,35 @@ export function get(id: number): Promise<dbtype.User | null> {
     });
 }
 
+const qSelectUserByLogin = `
+    select
+        id,
+        login,
+        email,
+        password_hash as passwordHash
+    from
+        "user"
+    where
+        login = $login`;
+
+export function getByLogin(login: string): Promise<dbtype.User | null> {
+    return new Promise((resolve, reject) => {
+        db.get(
+            qSelectUserByLogin,
+            { $login: login },
+            (err: Error | null, row: dbtype.User | undefined): void => {
+                if (err) {
+                    reject(err);
+                } else if (row) {
+                    resolve(row);
+                } else {
+                    resolve(null);
+                }
+            }
+        );
+    });
+}
+
 const qInsertUser = `
     insert into "user" (
         login,
@@ -39,17 +68,32 @@ const qInsertUser = `
         $login,
         $email,
         $passwordHash
-    )`;
+    )
+    on conflict (login) do nothing`;
 
-export function insert(user: dbtype.UnsavedUser): Promise<void> {
+/**
+ * Returns promise with a boolean value. If the value is true, then
+ * insert was successful, otherwise database query violates login
+ * attribute unique constraint
+ * @param user
+ */
+export function insert(user: dbtype.UnsavedUser): Promise<boolean> {
     return new Promise((resolve, reject) => {
-        db.run(qInsertUser, user, (err: Error | null): void => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve();
+        db.run(
+            qInsertUser,
+            {
+                $login: user.login,
+                $email: user.email,
+                $passwordHash: user.passwordHash,
+            },
+            function (err: Error | null): void {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(this.changes !== 0);
+                }
             }
-        });
+        );
     });
 }
 

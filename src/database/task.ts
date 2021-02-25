@@ -105,7 +105,7 @@ const qUpdateTaskById = `
     where
         id = $id`;
 
-export function update(task: dbtype.User): Promise<void> {
+export function update(task: dbtype.Task): Promise<void> {
     return new Promise((resolve, reject) => {
         db.run(qUpdateTaskById, task, (err: Error | null): void => {
             if (err) {
