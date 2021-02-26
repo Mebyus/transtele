@@ -15,7 +15,13 @@ export class MessageRouter {
     }
 
     public dispatch(msg: string): void {
-        const req: request.Client = JSON.parse(msg);
+        let req: request.Client;
+        try {
+            req = JSON.parse(msg);
+        } catch (e) {
+            this.errorReply(e);
+            return;
+        }
         if (req.topic !== 'request') {
             console.log('Unknown message topic:', req.topic);
             return;
@@ -57,19 +63,22 @@ export class MessageRouter {
                 this.reply(req.route, payload);
             })
             .catch((reason: any): void => {
-                console.log(reason);
-                let cause = '';
-                if (reason) {
-                    cause = reason.toString();
-                }
-                const serverSideError: error.ServerSide = {
-                    side: 'server',
-                    code: 1,
-                    cause: cause,
-                    description: '',
-                };
-                this.reply('error', serverSideError);
+                this.errorReply(reason);
             });
+    }
+
+    private errorReply(e: any): void {
+        let cause = '';
+        if (e) {
+            cause = e.toString();
+        }
+        const serverSideError: error.ServerSide = {
+            side: 'server',
+            code: 1,
+            cause: cause,
+            description: '',
+        };
+        this.reply('error', serverSideError);
     }
 
     private reply(topic: string, payload: any): void {

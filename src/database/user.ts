@@ -16,7 +16,7 @@ export function get(id: number): Promise<dbtype.User | null> {
     return new Promise((resolve, reject) => {
         db.get(
             qSelectUserById,
-            { id: id },
+            { $id: id },
             (err: Error | null, row: dbtype.User | undefined): void => {
                 if (err) {
                     reject(err);
@@ -105,12 +105,16 @@ const qUpdateUserById = `
 
 export function update(user: dbtype.User): Promise<void> {
     return new Promise((resolve, reject) => {
-        db.run(qUpdateUserById, user, (err: Error | null): void => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve();
+        db.run(
+            qUpdateUserById,
+            { $id: user.id, $passwordHash: user.passwordHash, $email: user.email },
+            (err: Error | null): void => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             }
-        });
+        );
     });
 }
