@@ -2,19 +2,20 @@ import express = require('express');
 import path = require('path');
 import cookieParser = require('cookie-parser');
 import logger = require('morgan');
-
-import indexRouter = require('./routes/index');
-import usersRouter = require('./routes/users');
+import * as session from 'express-session';
 
 const app = express();
+const sessionParser = session({
+    resave: true,
+    saveUninitialized: true,
+    secret: 'my big secret',
+});
 
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(sessionParser);
+
 app.use(express.static(path.join(__dirname, 'public')));
-
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-
 export = app;
