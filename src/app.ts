@@ -5,7 +5,7 @@ import logger = require('morgan');
 import * as session from 'express-session';
 
 const app = express();
-const sessionParser = session({
+export const sessionParser = session({
     resave: true,
     saveUninitialized: true,
     secret: 'my big secret',
@@ -18,4 +18,4 @@ app.use(cookieParser());
 app.use(sessionParser);
 
 app.use(express.static(path.join(__dirname, 'public')));
-export = app;
+export default app;

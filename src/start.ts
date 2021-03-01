@@ -1,36 +1,42 @@
-#!/usr/bin/env node
-
-/**
- * Module dependencies.
- */
-
-import app = require('./app');
+import * as express from 'express';
+import * as app from './app';
+import * as wsRouter from './ws-router';
 import debug = require('debug');
 import http = require('http');
 import WebSocket = require('ws');
-import wsRouter = require('./ws-router');
-/**
- * Get port from environment and store in Express.
- */
 
 const port = normalizePort(process.env.PORT || '3000');
-app.set('port', port);
+app.default.set('port', port);
 
-/**
- * Create HTTP server.
- */
+const server = http.createServer(app.default);
 
-const server = http.createServer(app);
+const wss = new WebSocket.Server({ clientTracking: false, noServer: true });
 
-// initialize the WebSocket server instance
-const wss = new WebSocket.Server({ server: server });
+server.on('upgrade', (req: express.Request, socket, head): void => {
+    console.log('Starting upgrade. Session id:', req.sessionID);
 
-wss.on('connection', (ws: WebSocket) => {
+    app.sessionParser(req, {}, (): void => {
+        if (!req.sessionID) {
+            socket.write('HTTP/1.1 401 Unauthorized\n\n');
+            socket.destroy();
+            return;
+        }
+
+        console.log('Upgrade. Session id:', req.sessionID);
+
+        wss.handleUpgrade(req, socket, head, function (ws) {
+            wss.emit('connection', ws, req);
+        });
+    });
+});
+
+wss.on('connection', (ws: WebSocket, req: express.Request): void => {
+    console.log('WS connection. Session id:', req.sessionID);
+
     const msgRouter = new wsRouter.MessageRouter(ws);
-    //connection is up, let's add a simple simple event
+
     ws.on('message', msgRouter.dispatch.bind(msgRouter));
 
-    //send immediatly a feedback to the incoming connection
     ws.send('Hi there, I am a WebSocket server');
 });
 
@@ -46,7 +52,7 @@ server.on('listening', onListening);
  * Normalize a port into a number, string, or false.
  */
 
-function normalizePort(val: string) {
+function normalizePort(val: string): string | number | boolean {
     const port = parseInt(val, 10);
 
     if (isNaN(port)) {
@@ -66,7 +72,7 @@ function normalizePort(val: string) {
  * Event listener for HTTP server "error" event.
  */
 
-function onError(error: any) {
+function onError(error: any): void {
     if (error.syscall !== 'listen') {
         throw error;
     }
@@ -90,7 +96,7 @@ function onError(error: any) {
  * Event listener for HTTP server "listening" event.
  */
 
-function onListening() {
+function onListening(): void {
     const addr = server.address();
     if (addr) {
         const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
