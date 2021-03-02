@@ -15,14 +15,12 @@ const wss = new WebSocket.Server({ clientTracking: false, noServer: true });
 server.on('upgrade', (req: express.Request, socket, head): void => {
     console.log('Starting upgrade. Session id:', req.sessionID);
 
-    app.sessionParser(req, {}, (): void => {
+    app.sessionParser(req, {} as any, (): void => {
         if (!req.sessionID) {
             socket.write('HTTP/1.1 401 Unauthorized\n\n');
             socket.destroy();
             return;
         }
-
-        console.log('Upgrade. Session id:', req.sessionID);
 
         wss.handleUpgrade(req, socket, head, function (ws) {
             wss.emit('connection', ws, req);
@@ -31,13 +29,9 @@ server.on('upgrade', (req: express.Request, socket, head): void => {
 });
 
 wss.on('connection', (ws: WebSocket, req: express.Request): void => {
-    console.log('WS connection. Session id:', req.sessionID);
-
-    const msgRouter = new wsRouter.MessageRouter(ws);
+    const msgRouter = new wsRouter.MessageRouter(ws, req.sessionID);
 
     ws.on('message', msgRouter.dispatch.bind(msgRouter));
-
-    ws.send('Hi there, I am a WebSocket server');
 });
 
 /**

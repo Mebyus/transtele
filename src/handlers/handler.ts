@@ -7,7 +7,7 @@ export function register(req: request.Register): Promise<any> {
     return auth.addUser(req.payload);
 }
 
-export function verify(req: request.Login): Promise<any> {
+export function verify(req: request.Login): Promise<boolean> {
     return auth.verify(req.payload.login, req.payload.password);
 }
 

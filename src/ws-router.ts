@@ -3,12 +3,23 @@ import * as handler from './handlers/handler';
 import * as error from './types/shared/error';
 import * as message from './types/shared/message';
 import * as request from './types/shared/request';
+import * as server from './types/shared/server-payload';
+
+interface WSSession {
+    user: server.User;
+}
+
+export const sessions = new Map<string, WSSession>();
 
 export class MessageRouter {
     private readonly ws: WebSocket;
+    private readonly sessionID: string;
+    private authorized: boolean;
 
-    constructor(ws: WebSocket) {
+    constructor(ws: WebSocket, sessionID: string) {
         this.ws = ws;
+        this.sessionID = sessionID;
+        this.authorized = false;
     }
 
     public dispatch(msg: string): void {
@@ -38,8 +49,9 @@ export class MessageRouter {
             case 'register':
                 return handler.register(req as request.Register);
             case 'session-info':
+                return this.sessionInfo(req as request.Session);
             case 'login':
-                return handler.verify(req as request.Login);
+                return this.login(req as request.Login);
             case 'task-list':
                 return handler.taskList(req as request.TaskList);
             case 'new-task':
@@ -51,6 +63,36 @@ export class MessageRouter {
             default:
                 return handler.unknown(req);
         }
+    }
+
+    private login(req: request.Login): Promise<any> {
+        return handler.verify(req).then((ok: boolean): void => {
+            if (ok) {
+                sessions.set(this.sessionID, {
+                    user: {
+                        login: req.payload.login,
+                    } as server.User,
+                });
+                this.authorized = true;
+            }
+        });
+    }
+
+    private sessionInfo(req: request.Session): Promise<server.Session> {
+        return new Promise((resolve, reject) => {
+            const session = sessions.get(this.sessionID);
+            if (session) {
+                resolve({
+                    exists: true,
+                    user: session.user,
+                });
+                this.authorized = true;
+            } else {
+                resolve({
+                    exists: false,
+                });
+            }
+        });
     }
 
     private errorReply(e: any): void {
