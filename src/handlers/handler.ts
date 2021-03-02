@@ -7,16 +7,16 @@ export function register(req: request.Register): Promise<any> {
     return auth.addUser(req.payload);
 }
 
-export function verify(req: request.Login): Promise<boolean> {
+export function verify(req: request.Login): Promise<dbtype.User | null> {
     return auth.verify(req.payload.login, req.payload.password);
 }
 
-export function taskList(req: request.TaskList): Promise<any> {
-    return task.getByUserId(1); // need uder id here
+export function taskList(req: request.TaskList, userId: number): Promise<any> {
+    return task.getByUserId(userId);
 }
 
-export function newTask(req: request.NewTask): Promise<any> {
-    return task.insert(req.payload, 1); // need uder id here
+export function newTask(req: request.NewTask, userId: number): Promise<any> {
+    return task.insert(req.payload, userId);
 }
 
 export function archiveTask(req: request.ArchiveTask): Promise<any> {

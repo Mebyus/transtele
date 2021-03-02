@@ -1,12 +1,13 @@
 import WebSocket = require('ws');
 import * as handler from './handlers/handler';
+import * as dbtype from './types/server/database';
 import * as error from './types/shared/error';
 import * as message from './types/shared/message';
 import * as request from './types/shared/request';
 import * as server from './types/shared/server-payload';
 
 interface WSSession {
-    user: server.User;
+    user: dbtype.User;
 }
 
 export const sessions = new Map<string, WSSession>();
@@ -15,11 +16,13 @@ export class MessageRouter {
     private readonly ws: WebSocket;
     private readonly sessionID: string;
     private authorized: boolean;
+    private session: WSSession | null;
 
     constructor(ws: WebSocket, sessionID: string) {
         this.ws = ws;
         this.sessionID = sessionID;
         this.authorized = false;
+        this.session = null;
     }
 
     public dispatch(msg: string): void {
@@ -45,6 +48,7 @@ export class MessageRouter {
     }
 
     private handleRequest(req: request.Client): Promise<any> {
+        // Unauthorized requests
         switch (req.route) {
             case 'register':
                 return handler.register(req as request.Register);
@@ -52,10 +56,19 @@ export class MessageRouter {
                 return this.sessionInfo(req as request.Session);
             case 'login':
                 return this.login(req as request.Login);
+        }
+
+        // Authorized requests
+        if (!this.authorized) {
+            return new Promise((resolve, reject) => {
+                reject('unauthorized');
+            });
+        }
+        switch (req.route) {
             case 'task-list':
-                return handler.taskList(req as request.TaskList);
+                return handler.taskList(req as request.TaskList, this.session!.user.id);
             case 'new-task':
-                return handler.newTask(req as request.NewTask);
+                return handler.newTask(req as request.NewTask, this.session!.user.id);
             case 'archive-task':
                 return handler.archiveTask(req as request.ArchiveTask);
             case 'update-task':
@@ -65,16 +78,18 @@ export class MessageRouter {
         }
     }
 
-    private login(req: request.Login): Promise<any> {
-        return handler.verify(req).then((ok: boolean): void => {
-            if (ok) {
-                sessions.set(this.sessionID, {
-                    user: {
-                        login: req.payload.login,
-                    } as server.User,
-                });
+    private login(req: request.Login): Promise<boolean> {
+        return handler.verify(req).then((user: dbtype.User | null): boolean => {
+            if (user) {
+                const newSession = {
+                    user: user,
+                };
+                sessions.set(this.sessionID, newSession);
                 this.authorized = true;
+                this.session = newSession;
+                return true;
             }
+            return false;
         });
     }
 
@@ -87,6 +102,7 @@ export class MessageRouter {
                     user: session.user,
                 });
                 this.authorized = true;
+                this.session = session;
             } else {
                 resolve({
                     exists: false,

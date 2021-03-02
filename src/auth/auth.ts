@@ -3,12 +3,12 @@ import * as userQuery from '../database/user';
 import * as dbtype from '../types/server/database';
 import * as payload from '../types/shared/client-payload';
 
-export function verify(login: string, password: string): Promise<boolean> {
-    return userQuery.getByLogin(login).then((user: dbtype.User | null): boolean => {
-        if (user) {
-            return compareHashAndPassword(user.passwordHash, password);
+export function verify(login: string, password: string): Promise<dbtype.User | null> {
+    return userQuery.getByLogin(login).then((user: dbtype.User | null): dbtype.User | null => {
+        if (user && compareHashAndPassword(user.passwordHash, password)) {
+            return user;
         } else {
-            return false;
+            return null;
         }
     });
 }
