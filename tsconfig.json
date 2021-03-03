@@ -19,5 +19,5 @@
         "forceConsistentCasingInFileNames": true
     },
     "include": ["./src/start.ts"],
-    "exclude": ["./server/", "./node_modules/"]
+    "exclude": ["./server/", "./node_modules/", "./server/public"]
 }
